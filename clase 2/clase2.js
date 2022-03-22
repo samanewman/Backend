@@ -1,109 +1,82 @@
 const fs = require('fs');
 
-class contenedor{
+class Contenedor{
 
     constructor (nombrearchivo){
         this.nombrearchivo = nombrearchivo;
     }
 
-    save(producto){
-        fs.promises.readFile(this.nombrearchivo, 'utf8')
-        .then( archivo => {
+    async getAll() {
+        try {
+          const objs = await fs.promises.readFile(this.nombrearchivo, 'utf-8')
+          return JSON.parse(objs)
+        } catch (error) {
+          return []
+        }
+      }
+
+    async save(producto){
+        const objs = await this.getAll()
+        let newId;   
+        if(objs.length == 0){   
+            newId = 1
+        } else {    
+            newId = objs[objs.length - 1].id + 1 
+        }
             
-            let json = JSON.parse(archivo)
-            //let ultimo = json.lenght 
-            //acá necesito ayuda, busqué en stack y me decía que use ObjectKey.(json).lenght 
-            //pero igual no logro que me traiga el lenght. ¿Será por el formato de mi json?
-            //producto.id = ultimo
-            json.push(producto)
-            let addproducto = JSON.stringify(json, null, 2)
-
-            fs.promises.writeFile(this.nombrearchivo, addproducto)
-                .then(res =>{
-                    console.log(`Se grabó con éxito el cambio en el archivo, el ID del producto es ${producto.id}`)
-                })
-                .catch(()=>{
-                    console.log("Error al grabar archivo")
-
-                })
-        })
+        const newObj = {...producto, id: newId}
+        objs.push(newObj)   
+        try {
+            fs.promises.writeFile(this.nombrearchivo, JSON.stringify(objs, null, 2))
+            return newId
+        } catch (error) {
+            console.log(error)
+        }
+             
+        }
        
-        .catch(error =>{
-            console.log("Error al leer achivo")
-        })
-
-    }
 
     getByID(id){
-        fs.promises.readFile(this.nombrearchivo, 'utf8')
-        .then(archivo => {
-
-            let json = JSON.parse(archivo)
-            let idproducto = json.findIndex(ind => ind.id === id)
-            if (idproducto !== -1){
-                console.log(json[idproducto])
-            }
-            else {
-                console.log(null)
-            }
-
-        })
-        .catch(error =>{
-            console.log("Error al leer achivo")
-        })
+       const objs = await this..getAll()
+        const buscado = objs.find (o => o.id ==id)
+        return buscado
     }
 
     deleteByID(id){
-        fs.promises.readFile(this.nombrearchivo, 'utf8')
-        .then(archivo => {
+        const objs = await this.getAll()
+        const index  =  objs.findIndex (o => o.id ==id)
+        if(index == -1){
+            throw new Error (`No es posible borrar, el id ${id} no existe`)
+        }
+        objs.splice(index, 1)
+        try{
+            await fs.writeFile(this.archivo, JSON.stringify (objs, null, 2))
+        }catch (error){
+            throw new Error (`No es posible borrar ${error}`)
 
-            let json = JSON.parse(archivo)
-            let idproducto = json.findIndex(ind => ind.id === id)
-            if (idproducto !== -1){
-                json.splice(idproducto, 1)
-                let delProducto = JSON.stringify(json, null, 2)
-                fs.promises.writeFile(this.nombrearchivo, delProducto)
-                .then(res =>{
-                    console.log(`Se eliminó con éxito el producto es ${id}`)
-                })
-                .catch(()=>{
-                    console.log("Error al eliminar archivo")
-
-                })
-            }
-            else {
-                console.log(null)
-            }
-
-        })
-        .catch(error =>{
-            console.log("Error al leer achivo")
-        })
+        }
     }
 
     deleteAll(){
-        fs.promises.writeFile(this.nombrearchivo, '[]')
-        .then((res) => {
-            console.log('Se ha borrado el contenido del archivo')
-        })
-        .catch(() => {
-            console.log('Error al intentar borrar el contenido del archivo')
-        })
+        await fs.writeFile(this.archivo, JSON.stringify (objs, null, 2))
     }
 };
 
-const archivo = new contenedor(
-    nombrearchivo = 'productos.json'
+const archivo = new Contenedor(
+                './productos.json'
 )
 
 let producto = {
-    id: 7,
+    
     nombre: "tazón",
     precio: 300
 }
 
+async function pruebas() {
 
-archivo.save(producto);
-archivo.getByID(1);
-archivo.deleteByID(6);
-archivo.deleteAll();
+    console.log('Se guardó producto con id:', await archivo.save(producto))
+    // await archivo.getByID(1);
+    // await archivo.deleteByID(6);
+    // archivo.deleteAll();
+}
+pruebas()
